@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<title>اختباراتي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7f2;--ink:#1d2b2a;--card:#fff;--acc:#0f766e;--hi:#f2b134;--ok:#15803d;--bad:#b91c1c;--line:#d7ddd5}
+@media(prefers-color-scheme:dark){:root{--bg:#12201f;--ink:#eef3ee;--card:#1b2d2b;--acc:#2dd4bf;--line:#32504c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Cairo,Tahoma,sans-serif;line-height:1.6}
+#app{max-width:520px;margin:auto;padding:16px}
+h1{font-size:28px;font-weight:900;margin:8px 0}
+h2{font-size:20px;margin:16px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+input,select,textarea{width:100%;padding:12px;margin:6px 0;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--card);color:var(--ink)}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;background:var(--acc);color:#fff;width:100%;margin:6px 0}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.sub{background:var(--card);color:var(--ink);border:1px solid var(--line);text-align:right;display:flex;align-items:center;gap:10px}
+button.sub i{width:12px;height:12px;border-radius:50%;display:inline-block}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--hi)}
+.top{display:flex;justify-content:space-between;align-items:center}
+.top button{width:auto;padding:6px 12px}
+.opt.ok{background:var(--ok);color:#fff}.opt.bad{background:var(--bad);color:#fff}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.big{font-size:40px;font-weight:900;color:var(--acc)}
+.msg{color:var(--bad);min-height:24px}
+small{opacity:.7}
+</style>
+</head>
+<body>
+<div id="app">جارِ التحميل…</div>
+<script>
+setTimeout(function(){
+  var a=document.getElementById("app");
+  if(a && a.textContent.trim()==="جارِ التحميل…"){
+    a.innerHTML='<h2>ما قدر يتصل</h2><div class="card">'+(window.__fbStarted
+      ? 'التطبيق فتح بس ما وصل لـ Firebase. تأكدي من الإنترنت وأعيدي فتح الملف.'
+      : 'ما انحمّلت ملفات Firebase من الإنترنت (غالباً الإنترنت ضعيف أو محجوب). جرّبي شبكة تانية أو شغّلي VPN وأعيدي فتح الملف.')+'</div>';
+  }
+},10000);
+</script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {initializeAuth,browserLocalPersistence,browserSessionPersistence,inMemoryPersistence,createUserWithEmailAndPassword,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {initializeFirestore,collection,addDoc,deleteDoc,doc,setDoc,getDoc,getDocs,query,where,orderBy,limit,increment,getCountFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+window.__fbStarted = true;
+/* ====== عدّل هذا القسم فقط ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyCvgtlorIQGurDh_XUXLtwYG3kJXkeKCE8",
+  authDomain: "ikhtibarat2026.firebaseapp.com",
+  projectId: "ikhtibarat2026",
+  appId: "1:972983110305:web:a086b81ecce62995df7ee0"
+};
+const TEACHER = "teacher"; // اسم المستخدم الخاص بك (المدرّس)
+/* ================================= */
+
+const SUBJECTS = [["العلوم","#16a34a"],["الرياضيات","#2563eb"],["الفيزياء","#9333ea"],["الإنكليزي","#dc2626"],["الكيمياء","#ea580c"],["الديانة","#0d9488"],["الفرنسي","#db2777"]];
+const fb = initializeApp(firebaseConfig), auth = initializeAuth(fb, {persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]}), db = initializeFirestore(fb, {experimentalForceLongPolling: true});
+const app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = id => document.getElementById(id);
+let me = null, isT = false, myName = "";
+
+onAuthStateChanged(auth, async u => {
+  me = u;
+  if (!u) return authView();
+  isT = u.email === TEACHER + "@quiz.app";
+  try { const d = await getDoc(doc(db, "users", u.uid)); myName = d.exists() ? d.data().name : TEACHER; } catch (e) { myName = TEACHER; }
+  home();
+});
+
+function authView() {
+  app.innerHTML = `<h1>اختباراتي</h1><div class="card">
+    <input id="n" placeholder="اسمك (للتسجيل الجديد فقط)">
+    <input id="u" placeholder="اسم المستخدم (حروف إنكليزية وأرقام)" autocapitalize="none" dir="ltr">
+    <input id="p" type="password" placeholder="كلمة السر (6 أحرف على الأقل)" dir="ltr">
+    <div class="msg" id="m"></div>
+    <button id="in">دخول</button><button id="up" class="alt">إنشاء حساب جديد</button></div>`;
+  const cred = () => [$("u").value.trim().toLowerCase().replace(/[^a-z0-9_]/g, "") + "@quiz.app", $("p").value];
+  $("in").onclick = async () => { try { await signInWithEmailAndPassword(auth, ...cred()); } catch { $("m").textContent = "اسم المستخدم أو كلمة السر غير صحيحة"; } };
+  $("up").onclick = async () => {
+    const name = $("n").value.trim();
+    if (!name) return $("m").textContent = "اكتب اسمك أولاً";
+    try {
+      const r = await createUserWithEmailAndPassword(auth, ...cred());
+      if (r.user.email !== TEACHER + "@quiz.app") await setDoc(doc(db, "users", r.user.uid), {name, solved: 0, correct: 0});
+    } catch (e) { $("m").textContent = e.code === "auth/email-already-in-use" ? "اسم المستخدم مأخوذ، جرّب غيره" : "تأكد من اسم المستخدم وكلمة السر (6 أحرف أو أكثر)"; }
+  };
+}
+
+async function guard(fn) {
+  try { await fn(); } catch (e) {
+    app.innerHTML = `<h2>صار خطأ</h2><div class="card">${esc(e.code || e.message)}</div><button id="b">رجوع</button>`;
+    $("b").onclick = home;
+  }
+}
+
+function head() {
+  return `<div class="top"><h1>أهلاً ${esc(myName)}</h1><button class="alt" id="out">خروج</button></div>`;
+}
+function bindOut() { $("out").onclick = () => signOut(auth); }
+
+function home() {
+  app.innerHTML = head() + `<h2>اختر المادة</h2>` +
+    SUBJECTS.map(([s, c], i) => `<button class="sub" data-i="${i}"><i style="background:${c}"></i>${s}</button>`).join("") +
+    `<button id="lb" style="background:var(--hi);color:#1d2b2a">🏆 الأكثر نشاطاً</button>` +
+    (isT ? `<button id="tp" class="alt">لوحة المدرّس</button>` : "");
+  bindOut();
+  document.querySelectorAll(".sub").forEach(b => b.onclick = () => guard(() => quiz(SUBJECTS[b.dataset.i][0])));
+  $("lb").onclick = () => guard(board);
+  if (isT) $("tp").onclick = () => guard(teacher);
+}
+
+async function quiz(subject) {
+  app.innerHTML = `<p>جارِ التحميل…</p>`;
+  const snap = await getDocs(query(collection(db, "questions"), where("subject", "==", subject)));
+  const qs = snap.docs.map(d => d.data()).sort(() => Math.random() - .5);
+  if (!qs.length) { app.innerHTML = `<h2>${subject}</h2><div class="card">ما في أسئلة بهالمادة بعد.</div><button id="b">رجوع</button>`; $("b").onclick = home; return; }
+  let i = 0, right = 0;
+  const show = () => {
+    if (i >= qs.length) { app.innerHTML = `<h2>${subject}</h2><div class="card"><div class="big">${right} / ${qs.length}</div>إجابات صحيحة</div><button id="b">رجوع للمواد</button>`; $("b").onclick = home; return; }
+    const q = qs[i];
+    app.innerHTML = `<small>${subject} · سؤال ${i + 1} من ${qs.length}</small><div class="card"><b>${esc(q.q)}</b></div>` +
+      q.options.map((o, k) => `<button class="alt opt" data-k="${k}">${esc(o)}</button>`).join("") + `<div id="nx"></div>`;
+    document.querySelectorAll(".opt").forEach(b => b.onclick = async () => {
+      const k = +b.dataset.k, ok = k === q.answer;
+      document.querySelectorAll(".opt").forEach(x => { x.disabled = true; if (+x.dataset.k === q.answer) x.classList.add("ok"); });
+      if (!ok) b.classList.add("bad"); else right++;
+      $("nx").innerHTML = `<button id="n">${i + 1 === qs.length ? "النتيجة" : "السؤال التالي"}</button>`;
+      $("n").onclick = () => { i++; show(); };
+      if (!isT) setDoc(doc(db, "users", me.uid), {solved: increment(1), correct: increment(ok ? 1 : 0)}, {merge: true});
+    });
+  };
+  show();
+}
+
+async function board() {
+  app.innerHTML = `<p>جارِ التحميل…</p>`;
+  const s = await getDocs(query(collection(db, "users"), orderBy("solved", "desc"), limit(10)));
+  const medal = ["🥇", "🥈", "🥉"];
+  app.innerHTML = `<h1>الأكثر نشاطاً</h1><div class="card">` +
+    (s.docs.map((d, i) => `<div class="row"><span>${medal[i] || i + 1} ${esc(d.data().name)}</span><b>${d.data().solved} سؤال</b></div>`).join("") || "ما حدا حل أسئلة بعد.") +
+    `</div><button id="b">رجوع</button>`;
+  $("b").onclick = home;
+}
+
+async function teacher() {
+  const cnt = (await getCountFromServer(collection(db, "users"))).data().count;
+  app.innerHTML = `<h1>لوحة المدرّس</h1><div class="card">عدد الطلاب المسجلين<div class="big">${cnt}</div></div>
+    <div class="card"><h2>إضافة سؤال</h2>
+    <select id="s">${SUBJECTS.map(([s]) => `<option>${s}</option>`).join("")}</select>
+    <textarea id="q" rows="2" placeholder="نص السؤال"></textarea>
+    ${[0, 1, 2, 3].map(k => `<input class="o" placeholder="الخيار ${k + 1}">`).join("")}
+    <select id="a"><option value="0">الجواب الصحيح: الخيار 1</option><option value="1">الخيار 2</option><option value="2">الخيار 3</option><option value="3">الخيار 4</option></select>
+    <div class="msg" id="m"></div><button id="add">حفظ السؤال</button></div>
+    <div class="card"><h2>أسئلة المادة</h2><select id="f">${SUBJECTS.map(([s]) => `<option>${s}</option>`).join("")}</select><div id="l"></div></div>
+    <button id="b" class="alt">رجوع</button>`;
+  $("b").onclick = home;
+  const list = async () => {
+    const s = await getDocs(query(collection(db, "questions"), where("subject", "==", $("f").value)));
+    $("l").innerHTML = s.docs.map(d => `<div class="row"><span>${esc(d.data().q)}</span><button class="alt" data-id="${d.id}" style="width:auto">حذف</button></div>`).join("") || "<small>ما في أسئلة</small>";
+    $("l").querySelectorAll("button").forEach(b => b.onclick = async () => { await deleteDoc(doc(db, "questions", b.dataset.id)); list(); });
+  };
+  $("f").onchange = list; list();
+  $("add").onclick = async () => {
+    const opts = [...document.querySelectorAll(".o")].map(x => x.value.trim()), q = $("q").value.trim();
+    if (!q || opts.some(x => !x)) return $("m").textContent = "عبّي السؤال والخيارات الأربعة";
+    await addDoc(collection(db, "questions"), {subject: $("s").value, q, options: opts, answer: +$("a").value});
+    $("q").value = ""; document.querySelectorAll(".o").forEach(x => x.value = ""); $("m").textContent = "";
+    $("f").value = $("s").value; list();
+  };
+}
+</script>
+</body>
+</html>
